@@ -13,7 +13,7 @@ A vacation scheduler bot for python
 	channels:history
 	chat:write
 	commands
-6.) Create a '.env' file in the same directory as the ngrok.exe file and the slack_bot.py
+6.) Create a '.env' file in the same directory as the file 'slack_bot.py'
 7.) In the same section, you will find a 'Bot User OAuth Access Token'. Copy and paste that into a '.env' file:
 	SLACK_TOKEN = <your token>
 8.) Go to 'Basic Information' under 'Settings', click show next to the 'Signing Secret'. Copy and paste this into the '.env' file:
@@ -21,7 +21,9 @@ A vacation scheduler bot for python
 9.) In the same section, click 'Install your app' into the workspace. Allow the requested access.
 10.) Download and run the ngrok.exe file. In the file type in the command:
 	ngrok http 5000
+	* Save ngrok.exe in the same folder as your '.env' and 'slack_bot.py' files
 	* If you want to change the port number you cann replace it for the '5000' in the command and also make the changes in slack_bot.py file
+	* Download link: https://ngrok.com/download
 11.) After doing that you will get a forwarding address, you can use either the http or the https one. Copy the address
 	Ex: https://88e623ac2d58.ngrok.io
 12.) Run the slack_bot.py file
