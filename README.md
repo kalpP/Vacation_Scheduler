@@ -7,7 +7,7 @@ A vacation scheduler bot for python
 1.) Visit: https://api.slack.com/   
 2.) Click "Start Building"  
 3.) Fill in the request information  
-* Make sure you are saving changes as you follow these next steps  
+	* Make sure you are saving changes as you follow these next steps  
 4.) In 'Basic Information' under 'Settings' you can scroll all the way down to change the bot icon/name/description  
 5.) Go to 'OAuth & Permissions' under 'Features'. Then scoll down to the 'Scopes' section and add an OAuth scope for:  
 	channels:history   
