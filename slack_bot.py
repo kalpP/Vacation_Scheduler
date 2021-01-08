@@ -19,6 +19,15 @@ BOT_ID = client.api_call("auth.test")['user_id']
 
 month_dict = {"01":"January","02":"February","03":"March","04":"April","05":"May","06":"June","07":"July","08":"August","09":"September","10":"October","11":"November","12":"December"}
 
+# No parameters sent: ERROR = {'ok': False, 'error': 'not_allowed_token_type'}
+# Only takes 1 argument: https://api.slack.com/methods/admin.emoji.add
+@app.route('/add-emoji', methods=['GET', 'POST'])
+def add_emoji():
+    name = (request.form.get("text")).split(', ')[0]
+    url = (request.form.get("text")).split(', ')[1]
+    client.admin_emoji_add()
+    return Response(), 200
+
 @app.route('/coin-flip', methods=['POST'])
 def coin_flip():
     tests = (request.form.get("text")).replace(" ", "")
