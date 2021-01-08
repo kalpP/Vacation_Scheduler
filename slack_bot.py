@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from flask import Flask, json, request, Response
 from slackeventsapi import SlackEventAdapter
 from slack import WebClient
+from random import randint
 
 load_dotenv()
 
@@ -16,17 +17,45 @@ slack_event_adapter = SlackEventAdapter(
 client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
 BOT_ID = client.api_call("auth.test")['user_id']
 
-vacation_requests = {}
-approved_vacations = {}
+month_dict = {"01":"January","02":"February","03":"March","04":"April","05":"May","06":"June","07":"July","08":"August","09":"September","10":"October","11":"November","12":"December"}
 
-@app.route('/vacation', methods=['POST'])
+@app.route('/coin-flip', methods=['POST'])
+def coin_flip():
+    tests = (request.form.get("text")).replace(" ", "")
+    results = []
+    try:
+        tests = int(tests)
+    except:
+        tests = 1
+    
+    for test in range(tests):
+        results.append("Head" if(randint(1,1000) % 2 == 0) else "Tail")
+    flip_result = ''
+    heads_counter, tails_counter = 0, 0
+    for result in results:
+        if(result == "Head"):
+            heads_counter += 1
+        else:
+            tails_counter += 1
+    
+    if(heads_counter == tails_counter):
+        flip_result = "Heads" if(randint(1,100) % 2 == 0) else "Tails"
+    elif(heads_counter > tails_counter):
+        flip_result = "Head"
+    else:
+        flip_result = "Tail"
+    client.chat_postMessage(channel=request.form.get("channel_name"), text=flip_result)
+
+    return Response(), 200
+
+@app.route('/request-leave', methods=['POST'])
 def message_actions():
-    if(request.form.get("channel_name") == "request-time-off" or request.form.get("channel_id") == "C01J9SR0YAD"):
+    if(request.form.get("channel_name") == "request-time-off"):
         result = client.views_open(
             trigger_id=request.form.get('trigger_id'),
             view={
                 "type": "modal",
-                "title": {"type": "plain_text", "text": "Schedule A Vacation"},
+                "title": {"type": "plain_text", "text": "Request a leave"},
                 "close": {"type": "plain_text", "text": "Close"},
                 "submit": {"type": "plain_text", "text": "Submit"},
                 "blocks": [
@@ -79,31 +108,27 @@ def message_actions():
                         }
                     }
                 ],
-            },
+            }
         )
+        return Response(), 200
     else:
         client.chat_postMessage(channel = request.form.get("channel_name"), text=":exclamation:Cannot request time off in this channel:exclamation:")
     return Response(), 200
 
 @app.route('/interactive', methods=['POST'])
 def test_message():
+    workspace_domain = f"https://{client.team_info().get('team').get('domain')}.slack.com/team/"
     data = json.loads(request.form["payload"])
     if(data.get("type") == "view_submission"):
         user = data.get("user")
         user_id = user.get("id")
         user_name = user.get("name")
-        view = data.get("view")
-        state = view.get("state")
-        values = state.get("values")
-        reason_of_leave = values.get("reason_of_leave")
-        reason_for_leave = reason_of_leave.get("reason_for_leave")
-        leave_reason = reason_for_leave.get("value")
-        vacation_start_date = values.get("vacation_start_date")
-        vacation_start_date_picker = vacation_start_date.get("vacation_start_date_picker")
-        start_date = vacation_start_date_picker.get("selected_date")
-        vacation_end_date = values.get("vacation_end_date")
-        vacation_end_date_picker = vacation_start_date.get("vacation_end_date_picker")
-        end_date = vacation_start_date_picker.get("selected_date")
+        user_profile_url = workspace_domain + user_id
+
+        values = data.get("view").get("state").get("values")
+        reason_of_leave = values.get("reason_of_leave").get("reason_for_leave").get("value")
+        start_date = values.get("vacation_start_date").get("vacation_start_date_picker").get("selected_date").split('-')
+        end_date = values.get("vacation_end_date").get("vacation_end_date_picker").get("selected_date").split('-')
 
         client.chat_postMessage(
             channel="#managers",
@@ -112,7 +137,7 @@ def test_message():
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "You have a new request:\n*<fakeLink.toEmployeeProfile.com|Fred Enriquez - New vacation request>*"
+                        "text": f"You have a new request:\n*<{user_profile_url}|{user_name} - New vacation request>*"
                     }
                 },
                 {
@@ -120,7 +145,7 @@ def test_message():
                     "fields": [
                         {
                             "type": "mrkdwn",
-                            "text": "*Reason:*\nComputer (laptop)"
+                            "text": f"*Reason:*\n{reason_of_leave}"
                         }
                     ]
                 },
@@ -129,11 +154,11 @@ def test_message():
                     "fields": [
                         {
                             "type": "mrkdwn",
-                            "text": "*Start Date:*\nComputer (laptop)"
+                            "text": f"*Start Date:*\n{month_dict[start_date[1]]} {start_date[2]}, {start_date[0]}"
                         },
                         {
                             "type": "mrkdwn",
-                            "text": "*End Date:*\nSubmitted Aut 10"
+                            "text": f"*End Date:*\n{month_dict[end_date[1]]} {end_date[2]}, {end_date[0]}"
                         }
                     ]
                 },
@@ -171,15 +196,25 @@ def test_message():
             message_ts = container.get("message_ts")
             channel_id = container.get("channel_id")
             decision = data.get("actions")[0].get("text").get("text")
-            user_id = data.get("user").get("id")
-            username = data.get("user").get("username")
-            user_name = data.get("user").get("name")
-            # Delete the old response
+            # Manager info
+            manager_user_id = data.get('user').get('id')
+            manager_username = data.get('user').get('username')
+            manager_name = data.get('user').get('name')
+            # User info
+            temp = data.get('message').get('blocks')[0].get('text').get('text')
+            user_id = temp[temp.index('/U') + 1 : temp.index('|')]
+            user_info = client.users_info(user = user_id)
+            username = user_info.get("user").get("name")
+            user_name = user_info.get("user").get("real_name")
+            # Delete responded message
             client.chat_delete(channel=channel_id, ts=message_ts)
             if(decision == "Approve"):
-                client.chat_postMessage(channel="#hr", text=f"Leave Request for {user_name} has been approved")
+                client.chat_postMessage(channel="#hr", text=f"Leave Request for {user_name} has been approved by {manager_name}")
+                client.chat_postMessage(channel=user_id, text="Your leave request has been approved :smiley:")
+                return Response(), 200
             else:
                 client.chat_postMessage(channel=user_id, text="Your leave request has been denied :cry:")
+                return Response(), 200
         except:
             print('Ignore this error')
     return Response(), 200
