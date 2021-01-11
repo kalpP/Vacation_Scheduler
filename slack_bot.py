@@ -1,6 +1,7 @@
 import slack
 import os
 import requests
+import praw
 from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, json, request, Response
@@ -12,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 slack_event_adapter = SlackEventAdapter(
-    os.environ['SIGNING_SECRET'], '/slack/events', app)
+    os.environ['SLACK_SIGNING_SECRET'], '/slack/events', app)
 
 client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
 BOT_ID = client.api_call("auth.test")['user_id']
@@ -25,8 +26,46 @@ month_dict = {"01":"January","02":"February","03":"March","04":"April","05":"May
 def add_emoji():
     name = (request.form.get("text")).split(', ')[0]
     url = (request.form.get("text")).split(', ')[1]
-    client.admin_emoji_add()
+    client.admin_emoji_add(token = os.environ['SLACK_APP_LEVEL_TOKEN'], name = name, url = url)
     return Response(), 200
+
+
+@app.route('/reddit-post', methods=['POST', 'GET'])
+def random_reddit_post():
+    reddit = praw.Reddit(
+        client_id = 'PBrNcIZenAT7Vw',
+        client_secret = 'kP9yF02Xe1EZVd0tMjg3wrdlildEbA',
+        password = 'Redditapp123',
+        user_agent = 'testscript by u/emailname1',
+        username = 'emailname1')
+    
+    random_subreddit = reddit.subreddit('random')
+    # NSFW filter
+    while(random_subreddit.over18):
+        random_subreddit = reddit.subreddit('random')
+    
+    random_post = random_subreddit.random()
+    post_url = "https://reddit.com" + random_post.permalink
+    subreddit_name = random_subreddit.display_name
+    post_title = random_post.title
+    post_text = random_post.selftext
+    # No post attachment
+    post_attachment = 0
+    attachment_url = ''
+    if(not random_post.is_self):
+        # Image attached
+        post_attachment = 1
+        attachment_url = c.url
+        if(random_post.domain == 'v.reddit.it'):
+            # Video attached
+            attachment_url = c.url
+            post_attachment = 2
+    
+
+    client.chat_postMessage(channel = request.form.get("channel_name"), text = f"Post URL: {post_url}\nSubreddit name: {subreddit_namme}\nPost title: {post_title}\n Post text: {post_text}\n Attachment URL: {attachment_url}")
+    return Responst(), 200
+
+
 
 @app.route('/coin-flip', methods=['POST'])
 def coin_flip():
