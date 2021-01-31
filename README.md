@@ -1,5 +1,5 @@
-# slack_bot
-A vacation scheduler bot for python
+# Vacation Scheduler
+A Slack bot for scheduling/managing vacations
 
 
 **Instructions**:
